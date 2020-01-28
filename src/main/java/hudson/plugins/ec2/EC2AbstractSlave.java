@@ -23,13 +23,17 @@
  */
 package hudson.plugins.ec2;
 
+
 import hudson.Util;
 import hudson.model.Computer;
 import hudson.model.Descriptor;
 import hudson.model.Descriptor.FormException;
 import hudson.model.Node;
 import hudson.model.Slave;
+import hudson.plugins.ec2.autosub.EC2AutoSubLauncher;
+import hudson.plugins.ec2.ssh.EC2UnixLauncher;
 import hudson.plugins.ec2.util.AmazonEC2Factory;
+import hudson.plugins.ec2.win.EC2WindowsLauncher;
 import hudson.slaves.NodeProperty;
 import hudson.slaves.ComputerLauncher;
 import hudson.slaves.RetentionStrategy;
@@ -203,6 +207,18 @@ public abstract class EC2AbstractSlave extends Slave {
 
     public EC2Cloud getCloud() {
         return (EC2Cloud) Jenkins.get().getCloud(cloudName);
+    }
+
+    protected static EC2ComputerLauncher createLauncher(AMITypeData amiType) {
+        if (amiType.isWindows()) {
+            return new EC2WindowsLauncher();
+        }
+        else if (amiType.isUnix()) {
+            return new EC2UnixLauncher();
+        }
+        else {
+            return new EC2AutoSubLauncher();
+        }
     }
 
     /**

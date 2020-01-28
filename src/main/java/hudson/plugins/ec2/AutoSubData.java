@@ -87,7 +87,7 @@ public class AutoSubData extends AMITypeData {
             return false;
         if (this.getClass() != obj.getClass())
             return false;
-        final WindowsData other = (WindowsData) obj;
+        final AutoSubData other = (AutoSubData) obj;
         if (bootDelay == null) {
             if (other.bootDelay != null)
                 return false;

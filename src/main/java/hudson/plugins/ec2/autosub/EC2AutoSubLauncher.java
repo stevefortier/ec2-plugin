@@ -1,4 +1,4 @@
-package hudson.plugins.ec2.win;
+package hudson.plugins.ec2.autosub;
 
 import hudson.model.Descriptor;
 import hudson.model.TaskListener;
