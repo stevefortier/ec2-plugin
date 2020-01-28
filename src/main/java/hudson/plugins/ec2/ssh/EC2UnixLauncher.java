@@ -109,6 +109,10 @@ public class EC2UnixLauncher extends EC2ComputerLauncher {
         log(Level.WARNING, computer, listener, message);
     }
 
+    protected void logError(EC2Computer computer, TaskListener listener, String message) {
+        log(Level.SEVERE, computer, listener, message);
+    }
+
     protected String buildUpCommand(EC2Computer computer, String command) {
         String remoteAdmin = computer.getRemoteAdmin();
         if (remoteAdmin != null && !remoteAdmin.equals("root")) {
@@ -172,8 +176,8 @@ public class EC2UnixLauncher extends EC2ComputerLauncher {
             String initScript = node.initScript;
             String tmpDir = (Util.fixEmptyAndTrim(node.tmpDir) != null ? node.tmpDir : "/tmp");
 
-            logInfo(computer, listener, "Creating tmp directory (" + tmpDir + ") if it does not exist");
-            conn.exec("mkdir -p " + tmpDir, logger);
+            //logInfo(computer, listener, "Creating tmp directory (" + tmpDir + ") if it does not exist");
+            //conn.exec("mkdir -p " + tmpDir, logger);
 
             if (initScript != null && initScript.trim().length() > 0
                     && conn.exec("test -e ~/.hudson-run-init", logger) != 0) {
@@ -218,33 +222,55 @@ public class EC2UnixLauncher extends EC2ComputerLauncher {
             }
 
             // TODO: parse the version number. maven-enforcer-plugin might help
-            executeRemote(computer, conn, "java -fullversion", "sudo yum install -y java-1.8.0-openjdk.x86_64", logger, listener);
-            executeRemote(computer, conn, "which scp", "sudo yum install -y openssh-clients", logger, listener);
+            // executeRemote(computer, conn, "java -fullversion", "sudo yum install -y java-1.8.0-openjdk.x86_64", logger, listener);
+            // executeRemote(computer, conn, "which scp", "sudo yum install -y openssh-clients", logger, listener);
+
+            logInfo(computer, listener, "###### 1 ######");
 
             // Always copy so we get the most recent slave.jar
             logInfo(computer, listener, "Copying remoting.jar to: " + tmpDir);
             scp.put(Jenkins.get().getJnlpJars("remoting.jar").readFully(), "remoting.jar", tmpDir);
+
+            logInfo(computer, listener, "###### 2 ######");
 
             final String jvmopts = node.jvmopts;
             final String prefix = computer.getSlaveCommandPrefix();
             final String suffix = computer.getSlaveCommandSuffix();
             final String remoteFS = node.getRemoteFS();
             final String workDir = Util.fixEmptyAndTrim(remoteFS) != null ? remoteFS : tmpDir;
+
+            logInfo(computer, listener, "###### 3 ######");
+
             String launchString = prefix + " java " + (jvmopts != null ? jvmopts : "") + " -jar " + tmpDir + "/remoting.jar -workDir " + workDir + suffix;
            // launchString = launchString.trim();
 
+            logInfo(computer, listener, "###### 4 ######");
+
             SlaveTemplate slaveTemplate = computer.getSlaveTemplate();
 
+            logInfo(computer, listener, "###### 5 ######");
+
             if (slaveTemplate != null && slaveTemplate.isConnectBySSHProcess()) {
+                logInfo(computer, listener, "###### 6 ######");
+
                 File identityKeyFile = createIdentityKeyFile(computer);
+
+                logInfo(computer, listener, "###### 7 ######");
 
                 try {
                     // Obviously the master must have an installed ssh client.
                     String sshClientLaunchString = String.format("ssh -o StrictHostKeyChecking=no -i %s %s@%s -p %d %s", identityKeyFile.getAbsolutePath(), node.remoteAdmin, getEC2HostAddress(computer), node.getSshPort(), launchString);
 
+                    logInfo(computer, listener, "###### 8 ######");
+
                     logInfo(computer, listener, "Launching remoting agent (via SSH client process): " + sshClientLaunchString);
                     CommandLauncher commandLauncher = new CommandLauncher(sshClientLaunchString, null);
+
+                    logInfo(computer, listener, "###### 9 ######");
+
                     commandLauncher.launch(computer, listener);
+
+                    logInfo(computer, listener, "###### 10 ######");
                 } finally {
                     if(!identityKeyFile.delete()) {
                         LOGGER.log(Level.WARNING, "Failed to delete identity key file");
@@ -253,17 +279,23 @@ public class EC2UnixLauncher extends EC2ComputerLauncher {
             } else {
                 logInfo(computer, listener, "Launching remoting agent (via Trilead SSH2 Connection): " + launchString);
                 final Session sess = conn.openSession();
+                logInfo(computer, listener, "###### 11 ######");
                 sess.execCommand(launchString);
+                logInfo(computer, listener, "###### 12 ######");
                 computer.setChannel(sess.getStdout(), sess.getStdin(), logger, new Listener() {
                     @Override
                     public void onClosed(Channel channel, IOException cause) {
+                        logInfo(computer, listener, "###### 13 ######");
                         sess.close();
                         conn.close();
+                        logInfo(computer, listener, "###### 14 ######");
                     }
                 });
             }
 
             successful = true;
+        } catch (Exception e) {
+            logError(computer, listener, "Failed to launch SSH agent : " + e.toString());
         } finally {
             if (cleanupConn != null && !successful)
                 cleanupConn.close();
