@@ -718,7 +718,7 @@ public abstract class EC2AbstractSlave extends Slave {
     }
 
     public Secret getAdminPassword() {
-        return amiType.isWindows() ? ((WindowsData) amiType).getPassword() : Secret.fromString("");
+        return amiType.getPassword();
     }
 
     public boolean isUseHTTPS() {
@@ -730,7 +730,7 @@ public abstract class EC2AbstractSlave extends Slave {
     }
 
     public boolean isSpecifyPassword() {
-        return amiType.isWindows() && ((WindowsData) amiType).isSpecifyPassword();
+        return amiType.isSpecifyPassword();
     }
 
     public static ListBoxModel fillZoneItems(AWSCredentialsProvider credentialsProvider, String region) {

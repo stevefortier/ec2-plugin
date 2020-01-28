@@ -42,6 +42,7 @@ public class WindowsData extends AMITypeData {
         return false;
     }
 
+    @Override
     public Secret getPassword() {
         return password;
     }
@@ -54,6 +55,7 @@ public class WindowsData extends AMITypeData {
         return bootDelay;
     }
 
+    @Override
     public boolean isSpecifyPassword() {
         return specifyPassword;
     }

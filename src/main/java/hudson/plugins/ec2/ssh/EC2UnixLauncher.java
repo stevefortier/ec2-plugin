@@ -24,6 +24,7 @@
 package hudson.plugins.ec2.ssh;
 
 import hudson.FilePath;
+import hudson.util.Secret;
 import hudson.Util;
 import hudson.ProxyConfiguration;
 import hudson.model.Descriptor;
@@ -33,7 +34,6 @@ import hudson.remoting.Channel;
 import hudson.remoting.Channel.Listener;
 import hudson.slaves.CommandLauncher;
 import hudson.slaves.ComputerLauncher;
-
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -158,7 +158,7 @@ public class EC2UnixLauncher extends EC2ComputerLauncher {
                 logInfo(computer, listener, "connect fresh as root");
                 cleanupConn = connectToSsh(computer, listener);
                 KeyPair key = computer.getCloud().getKeyPair();
-                if (!cleanupConn.authenticateWithPublicKey(computer.getRemoteAdmin(), key.getKeyMaterial().toCharArray(), "")) {
+                if (!authenticate(computer, listener, cleanupConn, computer.getRemoteAdmin(), key.getKeyMaterial(), node.isSpecifyPassword() ? node.getAdminPassword() : null)) {
                     logWarning(computer, listener, "Authentication failed");
                     return; // failed to connect as root.
                 }
@@ -323,7 +323,7 @@ public class EC2UnixLauncher extends EC2ComputerLauncher {
                 logInfo(computer, listener, "Authenticating as " + computer.getRemoteAdmin());
                 try {
                     bootstrapConn = connectToSsh(computer, listener);
-                    isAuthenticated = bootstrapConn.authenticateWithPublicKey(computer.getRemoteAdmin(), key.getKeyMaterial().toCharArray(), "");
+                    isAuthenticated = authenticate(computer, listener, bootstrapConn, computer.getRemoteAdmin(), key.getKeyMaterial(), computer.getNode().isSpecifyPassword() ? computer.getNode().getAdminPassword() : null);
                 } catch(IOException e) {
                     logException(computer, listener, "Exception trying to authenticate", e);
                     bootstrapConn.close();
@@ -344,6 +344,16 @@ public class EC2UnixLauncher extends EC2ComputerLauncher {
             }
         }
         return true;
+    }
+
+    private boolean authenticate(EC2Computer computer, TaskListener listener, Connection connection, String user, String key, Secret password) throws IOException {
+        logInfo(computer, listener, "Authenticating with " + user + " " + key + "" + password);
+        if (password != null) {
+            return connection.authenticateWithPassword(user, password.getPlainText());
+        }
+        else {
+            return connection.authenticateWithPublicKey(user, key.toCharArray(), "");
+        }
     }
 
     private Connection connectToSsh(EC2Computer computer, TaskListener listener) throws AmazonClientException,

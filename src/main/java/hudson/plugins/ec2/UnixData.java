@@ -4,6 +4,7 @@ import hudson.Extension;
 import hudson.model.Descriptor;
 
 import hudson.util.FormValidation;
+import hudson.util.Secret;
 import jenkins.model.Jenkins;
 import org.apache.commons.lang.StringUtils;
 import org.kohsuke.accmod.Restricted;
@@ -16,15 +17,27 @@ public class UnixData extends AMITypeData {
     private final String slaveCommandPrefix;
     private final String slaveCommandSuffix;
     private final String sshPort;
+    private final Secret password;
+    private final boolean specifyPassword;
 
     @DataBoundConstructor
-    public UnixData(String rootCommandPrefix, String slaveCommandPrefix, String slaveCommandSuffix, String sshPort) {
+    public UnixData(String rootCommandPrefix, String slaveCommandPrefix, String slaveCommandSuffix, String sshPort, String password, boolean specifyPassword) {
+        this.password = Secret.fromString(password);
         this.rootCommandPrefix = rootCommandPrefix;
         this.slaveCommandPrefix = slaveCommandPrefix;
         this.slaveCommandSuffix = slaveCommandSuffix;
         this.sshPort = sshPort;
+        this.specifyPassword = specifyPassword;
+        //Backwards compatibility
+        if (!specifyPassword && !this.password.getPlainText().isEmpty()) {
+            specifyPassword = true;
+        }
 
         this.readResolve();
+    }
+
+    public UnixData(String rootCommandPrefix, String slaveCommandPrefix, String slaveCommandSuffix, String sshPort) {
+        this(rootCommandPrefix, slaveCommandPrefix, slaveCommandSuffix, sshPort, "", false);
     }
 
     protected Object readResolve() {
@@ -40,6 +53,16 @@ public class UnixData extends AMITypeData {
     @Override
     public boolean isUnix() {
         return true;
+    }
+
+    @Override
+    public Secret getPassword() {
+        return password;
+    }
+
+    @Override
+    public boolean isSpecifyPassword() {
+        return specifyPassword;
     }
 
     @Extension
@@ -100,6 +123,8 @@ public class UnixData extends AMITypeData {
         result = prime * result + ((rootCommandPrefix == null) ? 0 : rootCommandPrefix.hashCode());
         result = prime * result + ((slaveCommandPrefix == null) ? 0 : slaveCommandPrefix.hashCode());
         result = prime * result + ((slaveCommandSuffix == null) ? 0 : slaveCommandSuffix.hashCode());
+        result = prime * result + ((password == null) ? 0 : password.hashCode());
+        result = prime * result + (specifyPassword ? 0 : 1);
         result = prime * result + ((sshPort == null) ? 0 : sshPort.hashCode());
         return result;
     }
@@ -131,7 +156,13 @@ public class UnixData extends AMITypeData {
         if (StringUtils.isEmpty(sshPort)) {
             if (!StringUtils.isEmpty(other.sshPort))
                 return false;
-        } else if (!sshPort.equals(other.sshPort))
+        } else if (!sshPort.equals(other.sshPort)) {
+            return false;
+        }
+        else if (password == null) {
+            if (other.password != null)
+                return false;
+        } else if (!password.equals(other.password))
             return false;
         return true;
     }
