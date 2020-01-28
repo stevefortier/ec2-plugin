@@ -3,6 +3,7 @@ package hudson.plugins.ec2;
 import hudson.Extension;
 import hudson.model.Descriptor.FormException;
 import hudson.model.Node;
+import hudson.plugins.ec2.win.EC2AutoSubLauncher;
 import hudson.plugins.ec2.ssh.EC2UnixLauncher;
 import hudson.plugins.ec2.win.EC2WindowsLauncher;
 import hudson.slaves.NodeProperty;
@@ -53,8 +54,12 @@ public class EC2OndemandSlave extends EC2AbstractSlave {
     public EC2OndemandSlave(String name, String instanceId, String templateDescription, String remoteFS, int numExecutors, String labelString, Mode mode, String initScript, String tmpDir, List<? extends NodeProperty<?>> nodeProperties, String remoteAdmin, String jvmopts, boolean stopOnTerminate, String idleTerminationMinutes, String publicDNS, String privateDNS, List<EC2Tag> tags, String cloudName, boolean useDedicatedTenancy, int launchTimeout, AMITypeData amiType, ConnectionStrategy connectionStrategy, int maxTotalUses)
             throws FormException, IOException {
 
-        super(name, instanceId, templateDescription, remoteFS, numExecutors, mode, labelString, amiType.isWindows() ? new EC2WindowsLauncher()
-                : new EC2UnixLauncher(), new EC2RetentionStrategy(idleTerminationMinutes), initScript, tmpDir, nodeProperties, remoteAdmin, jvmopts, stopOnTerminate, idleTerminationMinutes, tags, cloudName, useDedicatedTenancy, launchTimeout, amiType, connectionStrategy, maxTotalUses);
+        EC2ComputerLauncher computerLauncher = 
+            amiType.isWindows() ? new EC2WindowsLauncher() 
+            : amiType.isUnix() ? new EC2UnixLauncher()
+            : new EC2AutoSubLauncher();
+
+        super(name, instanceId, templateDescription, remoteFS, numExecutors, mode, labelString, computerLauncher, new EC2RetentionStrategy(idleTerminationMinutes), initScript, tmpDir, nodeProperties, remoteAdmin, jvmopts, stopOnTerminate, idleTerminationMinutes, tags, cloudName, useDedicatedTenancy, launchTimeout, amiType, connectionStrategy, maxTotalUses);
 
         this.publicDNS = publicDNS;
         this.privateDNS = privateDNS;
