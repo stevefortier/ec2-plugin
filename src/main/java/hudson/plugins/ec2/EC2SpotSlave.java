@@ -21,6 +21,8 @@ import com.amazonaws.services.ec2.model.TerminateInstancesRequest;
 
 import hudson.Extension;
 import hudson.model.Descriptor.FormException;
+import hudson.plugins.ec2.ssh.EC2UnixLauncher;
+import hudson.plugins.ec2.win.EC2WindowsLauncher;
 import hudson.slaves.NodeProperty;
 
 import javax.annotation.CheckForNull;
@@ -46,7 +48,8 @@ public class EC2SpotSlave extends EC2AbstractSlave implements EC2Readiness {
     public EC2SpotSlave(String name, String spotInstanceRequestId, String templateDescription, String remoteFS, int numExecutors, Mode mode, String initScript, String tmpDir, String labelString, List<? extends NodeProperty<?>> nodeProperties, String remoteAdmin, String jvmopts, String idleTerminationMinutes, List<EC2Tag> tags, String cloudName, int launchTimeout, AMITypeData amiType, ConnectionStrategy connectionStrategy, int maxTotalUses)
             throws FormException, IOException {
 
-        super(name, "", templateDescription, remoteFS, numExecutors, mode, labelString, createLauncher(amiType), new EC2RetentionStrategy(idleTerminationMinutes), initScript, tmpDir, nodeProperties, remoteAdmin, jvmopts, false, idleTerminationMinutes, tags, cloudName, false, launchTimeout, amiType, connectionStrategy, maxTotalUses);
+        super(name, "", templateDescription, remoteFS, numExecutors, mode, labelString, amiType.isWindows() ? new EC2WindowsLauncher() :
+                new EC2UnixLauncher(), new EC2RetentionStrategy(idleTerminationMinutes), initScript, tmpDir, nodeProperties, remoteAdmin, jvmopts, false, idleTerminationMinutes, tags, cloudName, false, launchTimeout, amiType, connectionStrategy, maxTotalUses);
 
         this.name = name;
         this.spotInstanceRequestId = spotInstanceRequestId;
